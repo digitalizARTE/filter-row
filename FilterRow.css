@@ -11,3 +11,9 @@ tr.filter-row-header .filter-row-icon input {
     background-repeat: no-repeat;
     padding-left: 16px;
 }
+
+.filter-row-input-no-data
+{
+    background-color: #FF9393;
+    color:#FFF;
+}
