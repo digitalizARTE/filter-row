@@ -7,7 +7,6 @@
  * http://www.gnu.org/licenses/
  */
 Ext.namespace('Ext.ux.grid');
-
 /**
  * @class Ext.ux.grid.FilterRow
  * @extends Ext.util.Observable
@@ -20,31 +19,31 @@ Ext.namespace('Ext.ux.grid');
  * <p>Example:
  * 
  * <pre><code>
-var grid = new Ext.grid.GridPanel({
-  columns: [
-    {
-      header: 'Name',
-      dataIndex: 'name',
-      // Filter by regular expression
-      // {0} will be substituted with current field value
-      filter: {
-        test: "/{0}/i"
-      }
-    },
-    {
-      header: 'Age',
-      dataIndex: 'age',
-      filter: {
-        // Show larger ages than the one entered to field
-        test: function(filterValue, value) {
-          return value > filterValue;
-        }
-      }
-    }
-  ],
-  plugins: ["filterrow"],
-  ...
-});
+ var grid = new Ext.grid.GridPanel({
+ columns: [
+ {
+ header: 'Name',
+ dataIndex: 'name',
+ // Filter by regular expression
+ // {0} will be substituted with current field value
+ filter: {
+ test: "/{0}/i"
+ }
+ },
+ {
+ header: 'Age',
+ dataIndex: 'age',
+ filter: {
+ // Show larger ages than the one entered to field
+ test: function(filterValue, value) {
+ return value > filterValue;
+ }
+ }
+ }
+ ],
+ plugins: ["filterrow"],
+ ...
+ });
  * </code></pre>
  */
 Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
@@ -53,39 +52,33 @@ Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
    * false, to turn automatic filtering off. (default true)
    */
   autoFilter: true,
-  
   /**
    * @cfg {Boolean} refilterOnStoreUpdate
    * true to refilter store when records added/removed. (default false)
    */
   refilterOnStoreUpdate: false,
-  
-  constructor: function(conf) {
+  constructor: function (conf) {
     Ext.apply(this, conf || {});
-    
     this.addEvents(
-      /**
-       * @event change
-       * Fired when any one of the fields is changed.
-       * @param {Object} filterValues object containing values of all
-       * filter-fields.  When column has "id" defined, then property
-       * with that ID will hold filter value.  When no "id" defined,
-       * then dataIndexes are used.  That is, you only need to specify
-       * ID-s for columns, when two filters use the same dataIndex.
-       */
-      "change"
-    );
+    /**
+     * @event change
+     * Fired when any one of the fields is changed.
+     * @param {Object} filterValues object containing values of all
+     * filter-fields.  When column has "id" defined, then property
+     * with that ID will hold filter value.  When no "id" defined,
+     * then dataIndexes are used.  That is, you only need to specify
+     * ID-s for columns, when two filters use the same dataIndex.
+     */
+    "change");
     if (this.listeners) {
       this.on(this.listeners);
     }
   },
-  
-  init: function(grid) {
+  init: function (grid) {
     this.grid = grid;
     var cm = grid.getColumnModel();
     var view = grid.getView();
-   
-    /*
+/*
      * Because of PivotGrid, GridView was changed in Ext 3.3 to
      * completely re-render grid header on store "datachanged" event
      * (which is fired after each loading/filtering/sorting).  But for
@@ -98,116 +91,93 @@ Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
      * 
      * See also: http://www.sencha.com/forum/showthread.php?118510
      */
-    view.onDataChange = function() {
+    view.onDataChange = function () {
       this.refresh(); // this was: this.refresh(true);
       this.updateHeaderSortState();
       this.syncFocusEl(0);
     };
-    
     // convert all filter configs to FilterRowFilter instances
     var Filter = Ext.ux.grid.FilterRowFilter;
-    this.eachFilterColumn(function(col) {
+    this.eachFilterColumn(function (col) {
       if (!(col.filter instanceof Filter)) {
         col.filter = new Filter(col.filter);
       }
       col.filter.on("change", this.onFieldChange, this);
     });
-    
     this.applyTemplate();
     // add class for attatching plugin specific styles
     grid.addClass('filter-row-grid');
-    
     // when grid initially rendered
     grid.on("render", this.renderFields, this);
-    
     // when Ext grid state restored (untested)
     grid.on("staterestore", this.resetFilterRow, this);
-    
     // when the width of the whole grid changed
     grid.on("resize", this.resizeAllFilterFields, this);
     // when column width programmatically changed
     cm.on("widthchange", this.onColumnWidthChange, this);
     // Monitor changes in column widths
     // newWidth will contain width like "100px", so we use parseInt to get rid of "px"
-    view.onColumnWidthUpdated = view.onColumnWidthUpdated.createSequence(function(colIndex, newWidth) {
+    view.onColumnWidthUpdated = view.onColumnWidthUpdated.createSequence(function (colIndex, newWidth) {
       this.onColumnWidthChange(this.grid.getColumnModel(), colIndex, parseInt(newWidth, 10));
     }, this);
-    
     // when column is moved, remove fields, after the move add them back
     cm.on("columnmoved", this.resetFilterRow, this);
     view.afterMove = view.afterMove.createSequence(this.renderFields, this);
-    
     // when column header is renamed, remove fields, afterwards add them back
     cm.on("headerchange", this.resetFilterRow, this);
     view.onHeaderChange = view.onHeaderChange.createSequence(this.renderFields, this);
-    
     // When column hidden or shown
     cm.on("hiddenchange", this.onColumnHiddenChange, this);
-    
     if (this.refilterOnStoreUpdate) {
       this.respectStoreFilter();
     }
   },
-  
   // Makes store add() and load() methods to respect filtering.
-  respectStoreFilter: function() {
+  respectStoreFilter: function () {
     var store = this.grid.getStore();
-    
     // re-apply filter after store load
     store.on("load", this.refilter, this);
-    
     // re-apply filter after adding stuff to store
     this.refilterAfter(store, "add");
     this.refilterAfter(store, "addSorted");
     this.refilterAfter(store, "insert");
   },
-  
   // Appends refiltering action to after store method
-  refilterAfter: function(store, method) {
+  refilterAfter: function (store, method) {
     var filterRow = this;
-    store[method] = store[method].createSequence(function() {
+    store[method] = store[method].createSequence(function () {
       if (this.isFiltered()) {
         filterRow.refilter();
       }
     });
   },
-  
-  onColumnHiddenChange: function(cm, colIndex, hidden) {
+  onColumnHiddenChange: function (cm, colIndex, hidden) {
     var filterDiv = Ext.get(this.getFilterDivId(cm.getColumnId(colIndex)));
     if (filterDiv) {
       filterDiv.parent().dom.style.display = hidden ? 'none' : '';
     }
     this.resizeAllFilterFields();
   },
-  
-  applyTemplate: function() {
+  applyTemplate: function () {
     var colTpl = "";
-    this.eachColumn(function(col) {
+    this.eachColumn(function (col) {
       var filterDivId = this.getFilterDivId(col.id);
       var style = col.hidden ? " style='display:none'" : "";
       var icon = (col.filter && col.filter.showFilterIcon) ? "filter-row-icon" : "";
       colTpl += '<td' + style + '><div class="x-small-editor ' + icon + '" id="' + filterDivId + '"></div></td>';
     });
-    
-    var headerTpl = new Ext.Template(
-      '<table border="0" cellspacing="0" cellpadding="0" style="{tstyle}">',
-      '<thead><tr class="x-grid3-hd-row">{cells}</tr></thead>',
-      '<tbody><tr class="filter-row-header">',
-      colTpl,
-      '</tr></tbody>',
-      "</table>"
-    );
-    
+    var headerTpl = new Ext.Template('<table border="0" cellspacing="0" cellpadding="0" style="{tstyle}">', '<thead><tr class="x-grid3-hd-row">{cells}</tr></thead>', '<tbody><tr class="filter-row-header">', colTpl, '</tr></tbody>', "</table>");
     var view = this.grid.getView();
-    Ext.applyIf(view, { templates: {} });
+    Ext.applyIf(view, {
+      templates: {}
+    });
     view.templates.header = headerTpl;
   },
-  
   // Removes filter fields from grid header and recreates
   // template. The latter is needed in case columns have been
   // reordered.
-  resetFilterRow: function() {
-    this.eachFilterColumn(function(col) {
+  resetFilterRow: function () {
+    this.eachFilterColumn(function (col) {
       var editor = col.filter.getField();
       if (editor && editor.rendered) {
         var el = col.filter.getFieldDom();
@@ -216,41 +186,44 @@ Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
     });
     this.applyTemplate();
   },
-  
-  renderFields: function() {
-    this.eachFilterColumn(function(col) {
+  renderFields: function () {
+    this.eachFilterColumn(function (col) {
       var filterDiv = Ext.get(this.getFilterDivId(col.id));
       var editor = col.filter.getField();
       editor.setWidth(col.width - 2);
       if (editor.rendered) {
         filterDiv.appendChild(col.filter.getFieldDom());
-      }
-      else {
+      } else {
         editor.render(filterDiv);
       }
     });
   },
-  
-  onFieldChange: function() {
+  onFieldChange: function () {
     if (this.hasListener("change")) {
       this.fireEvent("change", this.getFilterData());
     }
-    
     if (this.autoFilter) {
-      this.grid.getStore().filterBy(this.getFilterFunction());
+            //this.grid.getStore().filterBy(this.getFilterFunction());
+            this.refilter();
     }
   },
-  
   // refilters the store with current filter.
-  refilter: function() {
+  refilter: function () {
     this.grid.getStore().filterBy(this.getFilterFunction());
+        //2011-05-16 - DAE - Si se queda un solo registro lo seleciono
+        var cnt = this.grid.getStore().getCount();
+        if (cnt == 0) {
+            //TODO Mostrar un cartel de que no hay registros que coinciden con el filtro
+        } else if (cnt == 1) {
+            this.grid.getView().focusRow(0);
+        } else {
+        }
   },
-  
   // collects values from all filter-fields into hash that maps column
   // dataindexes (or id-s) to filter values.
-  getFilterData: function() {
+  getFilterData: function () {
     var data = {};
-    this.eachFilterColumn(function(col) {
+    this.eachFilterColumn(function (col) {
       // when column id is numeric, assume it's autogenerated and use
       // dataIndex.  Otherwise assume id is user-defined and use it.
       var name = (typeof col.id === "number") ? col.dataIndex : col.id;
@@ -258,24 +231,22 @@ Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
     });
     return data;
   },
-  
   /**
    * Returns store filtering function for the current values in filter
    * fields.
    * 
    * @return {Function}  function to use with store.filterBy()
    */
-  getFilterFunction: function() {
+  getFilterFunction: function () {
     var tests = [];
-    this.eachFilterColumn(function(col) {
+    this.eachFilterColumn(function (col) {
       var p = col.filter.createPredicate(col.dataIndex);
       if (p) {
         tests.push(p);
       }
     });
-    
-    return function(record) {
-      for (var i=0; i<tests.length; i++) {
+    return function (record) {
+      for (var i = 0; i < tests.length; i++) {
         if (!tests[i](record)) {
           return false;
         }
@@ -283,50 +254,43 @@ Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
       return true;
     };
   },
-  
-  onColumnWidthChange: function(cm, colIndex, newWidth) {
+  onColumnWidthChange: function (cm, colIndex, newWidth) {
     var col = cm.getColumnById(cm.getColumnId(colIndex));
     if (col.filter) {
       this.resizeFilterField(col, newWidth);
     }
   },
-  
   // When grid has forceFit: true, then all columns will be resized
   // when grid resized or column added/removed.
-  resizeAllFilterFields: function() {
+  resizeAllFilterFields: function () {
     var cm = this.grid.getColumnModel();
-    this.eachFilterColumn(function(col, i) {
+    this.eachFilterColumn(function (col, i) {
       this.resizeFilterField(col, cm.getColumnWidth(i));
     });
   },
-  
   // Resizes filter field according to the width of column
-  resizeFilterField: function(column, newColumnWidth) {
+  resizeFilterField: function (column, newColumnWidth) {
     var editor = column.filter.getField();
     editor.setWidth(newColumnWidth - 2);
   },
-  
   // Returns HTML ID of element containing filter div
-  getFilterDivId: function(columnId) {
+  getFilterDivId: function (columnId) {
     return this.grid.id + '-filter-' + columnId;
   },
-  
   // Iterates over each column that has filter
-  eachFilterColumn: function(func) {
-    this.eachColumn(function(col, i) {
+  eachFilterColumn: function (func) {
+    this.eachColumn(function (col, i) {
       if (col.filter) {
         func.call(this, col, i);
       }
     });
   },
-  
   // Iterates over each column in column config array
-  eachColumn: function(func) {
+  eachColumn: function (func) {
     Ext.each(this.grid.getColumnModel().config, func, this);
   }
 });
 Ext.preg("filterrow", Ext.ux.grid.FilterRow);
-
 /**
  * @class Ext.ux.grid.FilterRowFilter
  * @extends Ext.util.Observable
@@ -341,7 +305,6 @@ Ext.ux.grid.FilterRowFilter = Ext.extend(Ext.util.Observable, {
    * TextField with enableKeyEvents set to true.
    */
   field: undefined,
-  
   /**
    * @cfg {[String]} fieldEvents
    * 
@@ -351,7 +314,6 @@ Ext.ux.grid.FilterRowFilter = Ext.extend(Ext.util.Observable, {
    * the default TextField.
    */
   fieldEvents: ["keyup"],
-  
   /**
    * @cfg {String/Function} test
    * Determines how this column is filtered.
@@ -373,56 +335,48 @@ Ext.ux.grid.FilterRowFilter = Ext.extend(Ext.util.Observable, {
    * <p>Defaults to "/{0}/i".
    */
   test: "/{0}/i",
-  
   /**
    * @cfg {Object} scope
    * Scope for the test function.
    */
   scope: undefined,
-  
   /**
    * @cfg {Boolean} showFilterIcon
    * By default a magnifier-glass icon is shown inside filter field.
    * Set this to false, to disable that behaviour. (Default is true.)
    */
   showFilterIcon: true,
-  
-  constructor: function(config) {
+  constructor: function (config) {
     Ext.apply(this, config);
-    
     if (!this.field) {
-      this.field = new Ext.form.TextField({enableKeyEvents: true});
-    }
-    else if (!(this.field instanceof Ext.form.Field)) {
+      this.field = new Ext.form.TextField({
+        enableKeyEvents: true
+      });
+    } else if (!(this.field instanceof Ext.form.Field)) {
       this.field = Ext.create(this.field, "textfield");
     }
-    
     this.addEvents(
-      /**
-       * @event change
-       * Fired when ever one of the events listed in "events" config
-       * option is fired by field.
-       */
-      "change"
-    );
-    Ext.each(this.fieldEvents, function(event) {
+    /**
+     * @event change
+     * Fired when ever one of the events listed in "events" config
+     * option is fired by field.
+     */
+    "change");
+    Ext.each(this.fieldEvents, function (event) {
       this.field.on(event, this.fireChangeEvent, this);
     }, this);
   },
-  
-  fireChangeEvent: function() {
+  fireChangeEvent: function () {
     this.fireEvent("change");
   },
-  
   /**
    * Returns the field of this filter.
    * 
    * @return {Ext.form.Field}
    */
-  getField: function() {
+  getField: function () {
     return this.field;
   },
-  
   /**
    * Returns DOM Element that is the root element of form field.
    * 
@@ -432,19 +386,17 @@ Ext.ux.grid.FilterRowFilter = Ext.extend(Ext.util.Observable, {
    * 
    * @return {HTMLElement}
    */
-  getFieldDom: function() {
+  getFieldDom: function () {
     return this.field.wrap ? this.field.wrap.dom : this.field.el.dom;
   },
-  
   /**
    * Returns the value of filter field.
    * 
    * @return {Anything}
    */
-  getFieldValue: function() {
+  getFieldValue: function () {
     return this.field.getValue();
   },
-  
   /**
    * Creates predicate function for filtering the column associated
    * with this filter.
@@ -452,37 +404,32 @@ Ext.ux.grid.FilterRowFilter = Ext.extend(Ext.util.Observable, {
    * @param {String} dataIndex
    * @return {Function}
    */
-  createPredicate: function(dataIndex) {
+  createPredicate: function (dataIndex) {
     var test = this.test;
     var filterValue = this.field.getValue();
-    
     // is test a regex string?
     if (typeof test === "string" && test.match(/^\/.*\/[img]*$/)) {
       return this.createRegExpPredicate(test, filterValue, dataIndex);
-    }
-    else {
+    } else {
       // otherwise assume it's a function
       var scope = this.scope;
-      return function(r) {
+      return function (r) {
         return test.call(scope, filterValue, r.get(dataIndex), r);
       };
     }
   },
-  
-  createRegExpPredicate: function(reString, filterValue, dataIndex) {
+  createRegExpPredicate: function (reString, filterValue, dataIndex) {
     // don't filter the column at all when field is empty
     if (!filterValue) {
       return false;
     }
-    
     var regex = this.createRegExp(reString, filterValue);
-    return function(r) {
+    return function (r) {
       return regex.test(r.get(dataIndex));
     };
   },
-  
   // Given string "/^{0}/i" and value "foo" creates regex: /^foo/i
-  createRegExp: function(reString, value) {
+  createRegExp: function (reString, value) {
     // parse the reString into pattern and flags
     var m = reString.match(/^\/(.*)\/([img]*)$/);
     var pattern = m[1];
@@ -491,6 +438,3 @@ Ext.ux.grid.FilterRowFilter = Ext.extend(Ext.util.Observable, {
     return new RegExp(String.format(pattern, Ext.escapeRe(value)), flags);
   }
 });
-
-
-
