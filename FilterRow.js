@@ -80,7 +80,7 @@ Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
         * then dataIndexes are used.  That is, you only need to specify
         * ID-s for columns, when two filters use the same dataIndex.
         */
-		"change");
+        "change");
         if (this.listeners) {
             this.on(this.listeners);
         }
@@ -136,17 +136,24 @@ Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
         cm.on("widthchange", this.onColumnWidthChange, this);
         // Monitor changes in column widths
         // newWidth will contain width like "100px", so we use parseInt to get rid of "px"
-        view.onColumnWidthUpdated = view.onColumnWidthUpdated.createSequence(function(colIndex, newWidth) {
+        //view.onColumnWidthUpdated = view.onColumnWidthUpdated.createSequence(function(colIndex, newWidth) {
+        //    this.onColumnWidthChange(this.grid.getColumnModel(), colIndex, parseInt(newWidth, 10));
+        //}, this);
+        view.onColumnWidthUpdated = Ext.util.Functions.createSequence(view.onColumnWidthUpdated, function(colIndex, newWidth) {
             this.onColumnWidthChange(this.grid.getColumnModel(), colIndex, parseInt(newWidth, 10));
         }, this);
         // when column is moved, remove fields, after the move add them back
         cm.on("columnmoved", this.resetFilterRow, this);
-        view.afterMove = view.afterMove.createSequence(this.renderFields, this);
+        //view.afterMove = view.afterMove.createSequence(this.renderFields, this);
+        view.afterMove = Ext.util.Functions.createSequence(view.afterMove, this.renderFields, this);
         // when column header is renamed, remove fields, afterwards add them back
         cm.on("headerchange", this.resetFilterRow, this);
         view.onHeaderChange = view.onHeaderChange.createSequence(this.renderFields, this);
         // When column hidden or shown
         cm.on("hiddenchange", this.onColumnHiddenChange, this);
+        view.updateAllColumnWidths = Ext.util.Functions.createSequence(view.updateAllColumnWidths, function() {
+            this.resizeAllFilterFields()
+        }, this);
         if (this.refilterOnStoreUpdate) {
             this.respectStoreFilter();
         }
@@ -187,7 +194,7 @@ Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
             var icon = (col.filter && col.filter.showFilterIcon) ? "filter-row-icon" : "";
             colTpl += '<td' + style + '><div class="x-small-editor ' + icon + '" id="' + filterDivId + '"></div></td>';
         });
-        var headerTpl = new Ext.Template('<table border="0" cellspacing="0" cellpadding="0" style="{tstyle}">', '<thead><tr class="x-grid3-hd-row">{cells}</tr></thead>', '<tbody><tr class="filter-row-header">', colTpl, '</tr></tbody>', "</table>");
+        var headerTpl = new Ext.Template('<table border="0" cellspacing="0" cellpadding="0" style="{tstyle}">', '<thead><tr class="x-grid3-hd-row">{cells}</tr></thead>', '<tbody><tr class="filter-row-header">', colTpl, '</tr></tbody>', '</table>');
         var view = this.grid.getView();
         Ext.applyIf(view, {
             templates: {}
@@ -313,8 +320,10 @@ Ext.ux.grid.FilterRow = Ext.extend(Ext.util.Observable, {
     },
     // Resizes filter field according to the width of column
     resizeFilterField: function(column, newColumnWidth) {
-        var editor = column.filter.getField();
-        editor.setWidth(newColumnWidth - 2);
+        if (!column.hidden) {
+            var editor = column.filter.getField();
+            editor.setWidth(newColumnWidth - 2);
+        }
     },
     // Returns HTML ID of element containing filter div
     getFilterDivId: function(columnId) {
@@ -422,7 +431,7 @@ Ext.ux.grid.FilterRowFilter = Ext.extend(Ext.util.Observable, {
         * Fired when ever one of the events listed in "events" config
         * option is fired by field.
         */
-		"change");
+        "change");
         Ext.each(this.fieldEvents, function(event) {
             this.field.on(event, this.fireChangeEvent, this);
         }, this);
